@@ -76,6 +76,7 @@
     width: 20px;
     height: 20px;
     border-color: #bdbdbd;
+    vertical-align: middle;
   }
 
   .add::before, .add::after {
