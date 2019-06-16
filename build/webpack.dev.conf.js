@@ -1,35 +1,69 @@
-var utils = require('./utils')
-var webpack = require('webpack')
-var config = require('../config')
-var merge = require('webpack-merge')
-var baseWebpackConfig = require('./webpack.base.conf')
-var HtmlWebpackPlugin = require('html-webpack-plugin')
-var FriendlyErrorsPlugin = require('friendly-errors-webpack-plugin')
+'use strict'
+const path = require('path')
+const webpack = require('webpack')
+const webpackMerge = require('webpack-merge')
+const baseWebpackConfig = require('./webpack.base.conf')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const FriendlyErrorsPlugin = require('friendly-errors-webpack-plugin')
+const notifier = require('node-notifier')
 
-// add hot-reload related code to entry chunks
-Object.keys(baseWebpackConfig.entry).forEach(function (name) {
-  baseWebpackConfig.entry[name] = ['./build/dev-client'].concat(baseWebpackConfig.entry[name])
-})
+const host = '0.0.0.0'
+const port = 8080
 
-module.exports = merge(baseWebpackConfig, {
-  module: {
-    rules: utils.styleLoaders({ sourceMap: config.dev.cssSourceMap })
+const webpackConfig = webpackMerge(baseWebpackConfig, {
+  mode: 'development',
+  devtool: 'cheap-module-eval-source-map',
+  devServer: {
+    clientLogLevel: 'warning',
+    historyApiFallback: {
+      rewrites: [{
+        from: /.*/,
+        to: path.posix.join('', 'index.html')
+      }]
+    },
+    hot: true,
+    contentBase: false,
+    compress: true,
+    host: host,
+    port: port,
+    open: false,
+    overlay: {
+      warnings: false,
+      errors: true
+    },
+    publicPath: '',
+    quiet: true,
+    watchOptions: {
+      poll: true
+    },
+    disableHostCheck: true
   },
-  // cheap-module-eval-source-map is faster for development
-  devtool: '#cheap-module-eval-source-map',
   plugins: [
-    new webpack.DefinePlugin({
-      'process.env': config.dev.env
-    }),
-    // https://github.com/glenjamin/webpack-hot-middleware#installation--usage
     new webpack.HotModuleReplacementPlugin(),
-    new webpack.NoEmitOnErrorsPlugin(),
-    // https://github.com/ampedandwired/html-webpack-plugin
+    new webpack.NamedModulesPlugin(),
     new HtmlWebpackPlugin({
       filename: 'index.html',
-      template: 'index.html',
+      template: './index.html',
       inject: true
     }),
-    new FriendlyErrorsPlugin()
+    new FriendlyErrorsPlugin({
+      compilationSuccessInfo: {
+        messages: [`Application running at: http://${host}:${port}`]
+      },
+      onErrors: (severity, errors) => {
+        if (severity !== 'error') return
+        const error = errors[0]
+        console.log(error)
+        const filename = error.file && error.file.split('!').pop()
+
+        notifier.notify({
+          title: 'choose-what',
+          message: `${severity}:${error.name}`,
+          subtitle: filename || ''
+        })
+      }
+    })
   ]
 })
+
+module.exports = webpackConfig
